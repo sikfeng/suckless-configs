@@ -1,16 +1,5 @@
 #include <X11/XF86keysym.h>
 
-//#define MAXCOLORS 9
-//static const char colors[NUMCOLORS][MAXCOLORS][8] = {
-//    // border   foreground background
-//    { "#000033", "#dddddd", "#000000" },  // dark blue, grey, black
-//    { "#000088", "#ffffff", "#000088" },  // blue, white, blue
-//    { "#ff0000", "#000000", "#ffff00" },  // red, black, yellow
-//    { "#ff0000", "#ffffff", "#ff0000" },  // red, white, red
-//    { "#000000", "#8ce000", "0000000" },  // black, green, black
-//    { "#000000", "#4ec2f7", "0000000" },  // black, blue, black
-//};
-
 /* appearance */
 static const unsigned int borderpx  = 1;        /* border pixel of windows */
 static const unsigned int snap      = 32;       /* snap pixel */
@@ -33,16 +22,14 @@ static const char col_white[]       = "#ffffff";
 static const char col_green[]       = "#8ce000";
 static const char col_blue[]       = "#4ec2f7";
 
-#define NUMCOLORS 6
-
 static const char *colors[][3]      = {
 	/*               fg         bg         border   */
-	[SchemeNorm] = { col_gray3, col_black, col_black },
-	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
-  [SchemeYellow] =	 { col_yellow, col_black, col_black },
-	[SchemeRed] =	 { col_red, col_black,    col_black },
-  [SchemeGreen] = { col_green, col_black, col_black },  // black, green, black
-  [SchemeBlue] ={ col_blue, col_black, col_black },  // black, blue, black
+	[SchemeNorm]   =  { col_gray3, col_black, col_black },
+	[SchemeSel]    =  { col_gray4, col_cyan,  col_cyan  },
+  [SchemeYellow] =  { col_yellow, col_black, col_black },
+	[SchemeRed]    =  { col_red, col_black,    col_black },
+  [SchemeGreen]  =  { col_green, col_black, col_black },
+  [SchemeBlue]   =  { col_blue, col_black, col_black },
 };
 
 
