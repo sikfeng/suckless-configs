@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <locale.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <sys/select.h>
 #include <time.h>
 #include <unistd.h>
@@ -32,6 +33,7 @@ typedef struct {
 	uint b;
 	uint mask;
 	char *s;
+  int  altscrn;  /* 0: don't care,  -1: not alt screen,  1: alt screen */
 } MouseShortcut;
 
 typedef struct {
@@ -235,6 +237,7 @@ static char *usedfont = NULL;
 static double usedfontsize = 0;
 static double defaultfontsize = 0;
 
+static char *opt_alpha = NULL;
 static char *opt_class = NULL;
 static char **opt_cmd  = NULL;
 static char *opt_embed = NULL;
@@ -243,6 +246,7 @@ static char *opt_io    = NULL;
 static char *opt_line  = NULL;
 static char *opt_name  = NULL;
 static char *opt_title = NULL;
+static bool focused    = true;
 
 static int oldbutton = 3; /* button event on startup: 3 = release */
 
@@ -424,8 +428,9 @@ bpress(XEvent *e)
 	}
 
 	for (ms = mshortcuts; ms < mshortcuts + LEN(mshortcuts); ms++) {
-		if (e->xbutton.button == ms->b
-				&& match(ms->mask, e->xbutton.state)) {
+		if (e->xbutton.button == ms->b &&
+        (!ms->altscrn || (ms->altscrn == (tisaltscr() ? 1 : -1))) &&
+				match(ms->mask, e->xbutton.state)) {
 			ttywrite(ms->s, strlen(ms->s), 1);
 			return;
 		}
@@ -769,7 +774,10 @@ xloadcols(void)
 
 	/* set alpha value of bg color */
 	if (USE_ARGB) {
-		dc.col[defaultbg].color.alpha = alpha << 8;
+    if (opt_alpha)
+      alpha = strtof(opt_alpha, NULL);
+    unsigned int const usedalpha = focused ? alpha : alphaunfocused;
+		dc.col[defaultbg].color.alpha = usedalpha << 8;
 		dc.col[defaultbg].color.red   = ((dc.col[defaultbg].color.red >> 8) * alpha / 255) << 8;
 		dc.col[defaultbg].color.green = ((dc.col[defaultbg].color.green >> 8) * alpha / 255) << 8;
 		dc.col[defaultbg].color.blue  = ((dc.col[defaultbg].color.blue >> 8) * alpha / 255) << 8;
@@ -1043,43 +1051,25 @@ xinit(int cols, int rows)
 	Window parent;
 	pid_t thispid = getpid();
 	XColor xmousefg, xmousebg;
+  XWindowAttributes attr;
+  XVisualInfo vis;
 
 	if (!(xw.dpy = XOpenDisplay(NULL)))
 		die("can't open display\n");
 	xw.scr = XDefaultScreen(xw.dpy);
 	xw.depth = (USE_ARGB) ? 32: XDefaultDepth(xw.dpy, xw.scr);
+
 	if (!USE_ARGB)
 		xw.vis = XDefaultVisual(xw.dpy, xw.scr);
 	else {
-		XVisualInfo *vis;
-		XRenderPictFormat *fmt;
-		int nvi;
-		int i;
-
-		XVisualInfo tpl = {
-			.screen = xw.scr,
-			.depth = 32,
-			.class = TrueColor
-		};
-
-		vis = XGetVisualInfo(xw.dpy,
-				VisualScreenMask | VisualDepthMask | VisualClassMask,
-				&tpl, &nvi);
-		xw.vis = NULL;
-		for (i = 0; i < nvi; i++) {
-			fmt = XRenderFindVisualFormat(xw.dpy, vis[i].visual);
-			if (fmt->type == PictTypeDirect && fmt->direct.alphaMask) {
-				xw.vis = vis[i].visual;
-				break;
-			}
-		}
-
-		XFree(vis);
-
-		if (!xw.vis) {
-			fprintf(stderr, "Couldn't find ARGB visual.\n");
-			exit(1);
-		}
+    if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0)))) {
+      parent = XRootWindow(xw.dpy, xw.scr);
+    } else {
+      XGetWindowAttributes(xw.dpy, parent, &attr);
+      xw.depth = attr.depth;
+    }
+    XMatchVisualInfo(xw.dpy, xw.scr, xw.depth, TrueColor, &vis);
+    xw.vis = vis.visual;
 	}
 
 	/* font */
@@ -1093,8 +1083,7 @@ xinit(int cols, int rows)
 	if (!USE_ARGB)
 		xw.cmap = XDefaultColormap(xw.dpy, xw.scr);
 	else
-		xw.cmap = XCreateColormap(xw.dpy, XRootWindow(xw.dpy, xw.scr),
-				xw.vis, None);
+		xw.cmap = XCreateColormap(xw.dpy, parent, xw.vis, None);
 	xloadcols();
 
 	/* adjust fixed window geometry */
@@ -1708,11 +1697,21 @@ focus(XEvent *ev)
 		xseturgency(0);
 		if (IS_SET(MODE_FOCUS))
 			ttywrite("\033[I", 3, 0);
+    if (!focused) {
+      focused = true;
+      xloadcols();
+      redraw();
+    }
 	} else {
 		XUnsetICFocus(xw.xic);
 		win.mode &= ~MODE_FOCUSED;
 		if (IS_SET(MODE_FOCUS))
 			ttywrite("\033[O", 3, 0);
+    if (focused) {
+      focused = false;
+      xloadcols();
+      redraw();
+    }
 	}
 }
 
@@ -1969,6 +1968,9 @@ main(int argc, char *argv[])
 	case 'a':
 		allowaltscreen = 0;
 		break;
+  case 'A':
+    opt_alpha = EARGF(usage());
+    break;
 	case 'c':
 		opt_class = EARGF(usage());
 		break;

@@ -84,7 +84,8 @@ char *termname = "st-256color";
 unsigned int tabspaces = 8;
 
 /* bg opacity */
-unsigned int alpha = 0xcc;
+unsigned int alpha = 0xed;
+unsigned int alphaunfocused = 0x64;
 
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
@@ -159,6 +160,11 @@ static unsigned int defaultattr = 11;
  * Internal mouse shortcuts.
  * Beware that overloading Button1 will disable the selection.
  */
+
+/* Internal keyboard shortcuts. */
+#define MODKEY Mod4Mask
+#define TERMMOD (ControlMask|ShiftMask)
+
 static MouseShortcut mshortcuts[] = {
 	/* button               mask            string */
   { Button4,              XK_NO_MOD,      "\031" },
@@ -169,11 +175,9 @@ MouseKey mkeys[] = {
   /* button               mask            function        argument */
   { Button4,              ShiftMask,      kscrollup,      {.i =  1} },
   { Button5,              ShiftMask,      kscrolldown,    {.i =  1} },
+  { Button4,              MODKEY,         kscrollup,      {.i =  1} },
+  { Button5,              MODKEY,         kscrolldown,    {.i = 1} },
 };
-
-/* Internal keyboard shortcuts. */
-#define MODKEY Mod1Mask
-#define TERMMOD (ControlMask|ShiftMask)
 
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
@@ -190,6 +194,12 @@ static Shortcut shortcuts[] = {
 	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
   { ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} },
   { ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
+  { MODKEY,               XK_Page_Up,     kscrollup,      {.i = -1} },
+  { MODKEY,               XK_Page_Down,   kscrolldown,    {.i = -1} },
+  { MODKEY,               XK_Up,          kscrollup,      {.i =  1} },
+  { MODKEY,               XK_Down,        kscrolldown,    {.i =  1} },
+	{ MODKEY|ShiftMask,     XK_Up,          zoom,           {.f = +1} },
+	{ MODKEY|ShiftMask,     XK_Down,        zoom,           {.f = -1} },
 };
 
 /*
